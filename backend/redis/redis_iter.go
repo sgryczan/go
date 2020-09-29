@@ -2,26 +2,34 @@ package redis
 
 import (
 	"context"
+	"encoding/json"
+	"log"
 
 	redis "github.com/go-redis/redis/v8"
 	"github.com/kellegous/go/internal"
 )
 
-// RouteIterator allows iteration ont he named routes in the store
+// RouteIterator allows iteration on the named routes in the store
 type RouteIterator struct {
-	it   *redis.ScanIterator
-	ctx  context.Context
-	name string
-	err  error
-	cmd  *redis.ScanCmd
-	pos  int
-	rt   *internal.Route
+	it     *redis.ScanIterator
+	ctx    context.Context
+	name   string
+	err    error
+	cmd    *redis.ScanCmd
+	pos    int
+	rt     *internal.Route
+	client *redis.Client
 }
 
 // Valid checks if the current values of the Iterator are valid
 func (i *RouteIterator) Valid() bool {
 	// TODO implement me
 	return i.cmd != nil
+}
+
+// Val returns the key/field at the current cursor position
+func (i *RouteIterator) Val() string {
+	return i.it.Val()
 }
 
 // re-implementing this with identical logic to satisfy the calling Interface
@@ -58,7 +66,25 @@ func (i *RouteIterator) Release() {
 // will return true if more values can be read
 func (i *RouteIterator) Next() bool {
 	next := i.it.Next(i.ctx)
-	if next {
+	log.Printf("[REDIS] - Next()\n")
+	log.Println(i.it.Val())
+	i.name = i.it.Val()
+
+	ctx := context.Background()
+	val, err := i.client.Get(ctx, i.name).Result()
+	if err != nil {
+		if err == redis.Nil {
+			log.Printf("Route %s does not exist\n", i.name)
+			return false
+		}
+		log.Print(err)
+		return false
+	}
+	route := &internal.Route{}
+	err = json.Unmarshal([]byte(val), &route)
+	i.rt = route
+
+	if !next {
 		return false
 	}
 	return true

@@ -102,11 +102,22 @@ func (backend *Backend) Del(ctx context.Context, key string) error {
 // List all routes in an iterator, starting with the key prefix of start
 func (backend *Backend) List(ctx context.Context, start string) (internal.RouteIterator, error) {
 	log.Printf("[Redis] LIST %s\n", start)
-	iterator := backend.client.Scan(ctx, 0, fmt.Sprintf("%s*", start), 0).Iterator()
+	cmd := backend.client.Scan(ctx, 0, fmt.Sprintf("%s*", start), 0)
+	iterator := cmd.Iterator()
+	keys, cursor, err := cmd.Result()
+	if err != nil {
+		return nil, err
+	}
+	for _, key := range keys {
+		fmt.Println(key)
+	}
+	fmt.Printf("cursor: %d\n", cursor)
 
 	return &RouteIterator{
-		it:  iterator,
-		ctx: ctx,
+		it:     iterator,
+		ctx:    ctx,
+		pos:    int(cursor),
+		client: backend.client,
 	}, nil
 }
 
@@ -124,8 +135,31 @@ func (backend *Backend) NextID(ctx context.Context) (uint64, error) {
 // GetAll dumps everything in the db for backup purposes
 func (backend *Backend) GetAll(ctx context.Context) (map[string]internal.Route, error) {
 	log.Printf("[Redis] GetAll\n")
-	_ = map[string]internal.Route{}
-	_ = backend.client.Scan(ctx, 0, "*", 0).Iterator()
+	golinks := map[string]internal.Route{}
+	cmd := backend.client.Scan(ctx, 0, "*", 0)
+	keys, cursor, err := cmd.Result()
+	if err != nil {
+		return nil, err
+	}
+	for _, key := range keys {
+		fmt.Println(key)
+		val, err := backend.client.Get(ctx, key).Result()
+		if err != nil {
+			if err == redis.Nil {
+				log.Printf("Route %s does not exist\n", key)
+				return golinks, nil
+			}
+			log.Print(err)
+			return nil, err
+		}
+		route := &internal.Route{}
+		err = json.Unmarshal([]byte(val), &route)
+		if err != nil {
+			return nil, err
+		}
+		golinks[key] = *route
+	}
+	fmt.Printf("cursor: %d\n", cursor)
 
-	return nil, nil
+	return golinks, nil
 }

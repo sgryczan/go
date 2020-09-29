@@ -12,6 +12,7 @@ import (
 	"github.com/kellegous/go/backend"
 	"github.com/kellegous/go/backend/firestore"
 	"github.com/kellegous/go/backend/leveldb"
+	"github.com/kellegous/go/backend/redis"
 	"github.com/kellegous/go/web"
 )
 
@@ -22,6 +23,9 @@ func main() {
 	pflag.String("backend", "leveldb", "backing store to use. 'leveldb' and 'firestore' currently supported.")
 	pflag.String("data", "data", "The location of the leveldb data directory")
 	pflag.String("project", "", "The GCP project to use for the firestore backend. Will attempt to use application default creds if not defined.")
+	pflag.String("redis-addr", "", "Address of the redis DB to use")
+	pflag.String("redis-pw", "", "Password to the redis DB")
+	pflag.String("DB", "", "Redis DB to use.")
 	pflag.String("host", "", "The host field to use when gnerating the source URL of a link. Defaults to the Host header of the generate request")
 	pflag.Parse()
 
@@ -46,6 +50,12 @@ func main() {
 		var err error
 
 		backend, err = firestore.New(context.Background(), viper.GetString("project"))
+		if err != nil {
+			log.Panic(err)
+		}
+	case "redis":
+		var err error
+		backend, err = redis.New(viper.GetString("redis-addr"), viper.GetString("redis-pw"), viper.GetInt("DB"), context.Background())
 		if err != nil {
 			log.Panic(err)
 		}

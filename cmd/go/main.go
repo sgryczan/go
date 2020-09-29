@@ -25,7 +25,8 @@ func main() {
 	pflag.String("project", "", "The GCP project to use for the firestore backend. Will attempt to use application default creds if not defined.")
 	pflag.String("redis-addr", "", "Address of the redis DB to use")
 	pflag.String("redis-pw", "", "Password to the redis DB")
-	pflag.String("DB", "", "Redis DB to use.")
+	pflag.String("redis-db", "", "Redis DB to use.")
+	pflag.Bool("redis-debug", false, "Enable redis debug logging")
 	pflag.String("host", "", "The host field to use when gnerating the source URL of a link. Defaults to the Host header of the generate request")
 	pflag.Parse()
 
@@ -55,7 +56,7 @@ func main() {
 		}
 	case "redis":
 		var err error
-		backend, err = redis.New(context.Background(), viper.GetString("redis-addr"), viper.GetString("redis-pw"), viper.GetInt("DB"))
+		backend, err = redis.New(context.Background(), viper.GetString("redis-addr"), viper.GetString("redis-pw"), viper.GetInt("redis-db"))
 		if err != nil {
 			log.Panic(err)
 		}

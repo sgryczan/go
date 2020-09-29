@@ -77,3 +77,16 @@ func TestGet(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, case1, string(js))
 }
+
+func TestDel(t *testing.T) {
+	mock := redismock.NewNiceMock(client)
+	mock.On("Del", key).Return(redis.NewStringResult(val, nil))
+
+	backend, err := New(context.Background(), Addr, "", 0)
+	err = backend.Del(context.Background(), key)
+	if err != nil {
+		t.Fatalf("Failed to delete key: %s", err)
+	}
+
+	assert.NoError(t, err)
+}

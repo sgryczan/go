@@ -44,6 +44,19 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
+func TestNew(t *testing.T) {
+	exp := time.Duration(0)
+
+	mock := redismock.NewNiceMock(client)
+	mock.On("Set", key, val, exp).Return(redis.NewStatusResult("", nil))
+
+	_, err := New(context.Background(), Addr, "", 0)
+	if err != nil {
+		t.Fatalf("Failed with err: %s", err)
+	}
+	assert.NoError(t, err)
+}
+
 func TestSet(t *testing.T) {
 	exp := time.Duration(0)
 

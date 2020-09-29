@@ -10,12 +10,6 @@ import (
 	"github.com/kellegous/go/internal"
 )
 
-var (
-	Address  string
-	Password string
-	DB       int
-)
-
 const (
 	nextIDKey = "nextID"
 )

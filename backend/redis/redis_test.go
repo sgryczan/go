@@ -3,7 +3,6 @@ package redis
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"os"
 	"testing"
@@ -34,14 +33,9 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
-	Mock = redismock.NewNiceMock(client)
 
-	client = redis.NewClient(&redis.Options{
-		Addr: mr.Addr(),
-	})
-	// Addr is the address of the mock redis instance
+	Mock = redismock.NewNiceMock(client)
 	Addr = mr.Addr()
-	_ = fmt.Sprintf("%s", Addr)
 
 	code := m.Run()
 	os.Exit(code)

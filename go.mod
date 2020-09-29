@@ -5,6 +5,7 @@ go 1.13
 require (
 	cloud.google.com/go v0.38.0
 	github.com/go-redis/redis v6.15.9+incompatible
+	github.com/go-redis/redis/v8 v8.2.3
 	github.com/googleapis/gax-go v2.0.2+incompatible // indirect
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.5.0

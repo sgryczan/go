@@ -26,7 +26,7 @@ type Backend struct {
 }
 
 // New instantiates a new Backend
-func New(addr, pw string, db int, ctx context.Context) (*Backend, error) {
+func New(ctx context.Context, addr, pw string, db int) (*Backend, error) {
 	client := redis.NewClient(&redis.Options{
 		Addr:     addr,
 		Password: pw,

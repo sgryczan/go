@@ -55,7 +55,7 @@ func main() {
 		}
 	case "redis":
 		var err error
-		backend, err = redis.New(viper.GetString("redis-addr"), viper.GetString("redis-pw"), viper.GetInt("DB"), context.Background())
+		backend, err = redis.New(context.Background(), viper.GetString("redis-addr"), viper.GetString("redis-pw"), viper.GetInt("DB"))
 		if err != nil {
 			log.Panic(err)
 		}

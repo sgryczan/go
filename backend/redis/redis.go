@@ -53,6 +53,7 @@ func (backend *Backend) Close() error {
 
 // Get retreives a shortcut from the data store.
 func (backend *Backend) Get(ctx context.Context, name string) (*internal.Route, error) {
+	log.Printf("[Redis] GET %s\n", name)
 	val, err := backend.client.Get(ctx, name).Result()
 	if err != nil {
 		if err == redis.Nil {
@@ -73,6 +74,7 @@ func (backend *Backend) Get(ctx context.Context, name string) (*internal.Route, 
 
 // Put stores a new route in the data store
 func (backend *Backend) Put(ctx context.Context, key string, rt *internal.Route) error {
+	log.Printf("[Redis] SET %s\n", key)
 	val, err := json.Marshal(rt)
 	if err != nil {
 		log.Print(err)
@@ -87,6 +89,7 @@ func (backend *Backend) Put(ctx context.Context, key string, rt *internal.Route)
 
 // Del deletes a route from the data store
 func (backend *Backend) Del(ctx context.Context, key string) error {
+	log.Printf("[Redis] DEL %s\n", key)
 	res, err := backend.client.Del(ctx, key).Result()
 	if err != nil {
 		log.Print(err)
@@ -98,6 +101,7 @@ func (backend *Backend) Del(ctx context.Context, key string) error {
 
 // List all routes in an iterator, starting with the key prefix of start
 func (backend *Backend) List(ctx context.Context, start string) (internal.RouteIterator, error) {
+	log.Printf("[Redis] LIST %s\n", start)
 	iterator := backend.client.Scan(ctx, 0, fmt.Sprintf("%s*", start), 0).Iterator()
 
 	return &RouteIterator{
@@ -108,6 +112,7 @@ func (backend *Backend) List(ctx context.Context, start string) (internal.RouteI
 
 // NextID generates the next numeric ID to be used for an auto-named route
 func (backend *Backend) NextID(ctx context.Context) (uint64, error) {
+	log.Printf("[Redis] NextID\n")
 	result, err := backend.client.Incr(ctx, nextIDKey).Uint64()
 	if err != nil {
 		log.Print(err)
@@ -118,6 +123,7 @@ func (backend *Backend) NextID(ctx context.Context) (uint64, error) {
 
 // GetAll dumps everything in the db for backup purposes
 func (backend *Backend) GetAll(ctx context.Context) (map[string]internal.Route, error) {
+	log.Printf("[Redis] GetAll\n")
 	_ = map[string]internal.Route{}
 	_ = backend.client.Scan(ctx, 0, "*", 0).Iterator()
 

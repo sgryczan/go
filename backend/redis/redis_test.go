@@ -21,10 +21,12 @@ var (
 )
 
 var (
-	key   = "key"
-	val   = "val"
-	Addr  string
-	case1 = `{"url":"http://czan.io","time":"2020-09-29T16:23:56.71891-06:00"}`
+	key         = "key"
+	val         = "val"
+	Addr        string
+	Mock        *redismock.ClientMock
+	MockBackend *Backend
+	case1       = `{"url":"http://czan.io","time":"2020-09-29T16:23:56.71891-06:00"}`
 )
 
 func TestMain(m *testing.M) {
@@ -32,12 +34,13 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
+	Mock = redismock.NewNiceMock(client)
 
 	client = redis.NewClient(&redis.Options{
 		Addr: mr.Addr(),
 	})
 	// Addr is the address of the mock redis instance
-	Addr := mr.Addr()
+	Addr = mr.Addr()
 	_ = fmt.Sprintf("%s", Addr)
 
 	code := m.Run()
@@ -45,12 +48,11 @@ func TestMain(m *testing.M) {
 }
 
 func TestNew(t *testing.T) {
-	exp := time.Duration(0)
+	var err error
 
-	mock := redismock.NewNiceMock(client)
-	mock.On("Set", key, val, exp).Return(redis.NewStatusResult("", nil))
+	_ = redismock.NewNiceMock(client)
 
-	_, err := New(context.Background(), Addr, "", 0)
+	MockBackend, err = New(context.Background(), Addr, "", 0)
 	if err != nil {
 		t.Fatalf("Failed with err: %s", err)
 	}
@@ -58,18 +60,17 @@ func TestNew(t *testing.T) {
 }
 
 func TestSet(t *testing.T) {
+	var err error
 	exp := time.Duration(0)
 
-	mock := redismock.NewNiceMock(client)
-	mock.On("Set", key, val, exp).Return(redis.NewStatusResult("", nil))
+	Mock.On("Set", key, val, exp).Return(redis.NewStatusResult("", nil))
 
-	backend, err := New(context.Background(), Addr, "", 0)
 	route := &internal.Route{}
 	err = json.Unmarshal([]byte(case1), &route)
 	if err != nil {
 		t.Fatalf("Failed with err: %s", err)
 	}
-	err = backend.Put(context.Background(), key, route)
+	err = MockBackend.Put(context.Background(), key, route)
 	if err != nil {
 		t.Fatalf("Failed with err: %s", err)
 	}
@@ -77,11 +78,10 @@ func TestSet(t *testing.T) {
 }
 
 func TestGet(t *testing.T) {
-	mock := redismock.NewNiceMock(client)
-	mock.On("Get", key).Return(redis.NewStringResult(val, nil))
+	var err error
+	Mock.On("Get", key).Return(redis.NewStringResult(val, nil))
 
-	backend, err := New(context.Background(), Addr, "", 0)
-	route, err := backend.Get(context.Background(), key)
+	route, err := MockBackend.Get(context.Background(), key)
 	js, err := json.Marshal(route)
 	if err != nil {
 		t.Fatalf("Failed to get value: %s", err)
@@ -92,14 +92,41 @@ func TestGet(t *testing.T) {
 }
 
 func TestDel(t *testing.T) {
-	mock := redismock.NewNiceMock(client)
-	mock.On("Del", key).Return(redis.NewStringResult(val, nil))
+	var err error
+	Mock.On("Del", key).Return(redis.NewStringResult(val, nil))
 
-	backend, err := New(context.Background(), Addr, "", 0)
-	err = backend.Del(context.Background(), key)
+	err = MockBackend.Del(context.Background(), key)
 	if err != nil {
 		t.Fatalf("Failed to delete key: %s", err)
 	}
 
 	assert.NoError(t, err)
+}
+
+// TestNextID ensures that nextID will be created and set to 1
+// if it doesn't already exist
+func TestNextID(t *testing.T) {
+	var err error
+
+	next, err := MockBackend.NextID(context.Background())
+	if err != nil {
+		t.Fatalf("Failed to increment nextID: %s", err)
+	}
+
+	assert.NoError(t, err)
+	assert.Equal(t, uint64(1), next)
+}
+
+// TestNextID2 makes sure nextID can increment further
+// in the case it already exists (in this case, from above test)
+func TestNextID2(t *testing.T) {
+	var err error
+
+	next, err := MockBackend.NextID(context.Background())
+	if err != nil {
+		t.Fatalf("Failed to increment nextID: %s", err)
+	}
+
+	assert.NoError(t, err)
+	assert.Equal(t, uint64(2), next)
 }

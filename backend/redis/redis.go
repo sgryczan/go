@@ -55,6 +55,10 @@ func (backend *Backend) Close() error {
 func (backend *Backend) Get(ctx context.Context, name string) (*internal.Route, error) {
 	val, err := backend.client.Get(ctx, name).Result()
 	if err != nil {
+		if err == redis.Nil {
+			log.Printf("Route %s does not exist\n", name)
+			return nil, internal.ErrRouteNotFound
+		}
 		log.Print(err)
 		return nil, err
 	}
@@ -114,5 +118,8 @@ func (backend *Backend) NextID(ctx context.Context) (uint64, error) {
 
 // GetAll dumps everything in the db for backup purposes
 func (backend *Backend) GetAll(ctx context.Context) (map[string]internal.Route, error) {
+	_ = map[string]internal.Route{}
+	_ = backend.client.Scan(ctx, 0, "*", 0).Iterator()
+
 	return nil, nil
 }

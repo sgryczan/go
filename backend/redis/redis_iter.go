@@ -1,18 +1,18 @@
 package redis
 
 import (
-	"sync"
+	"context"
 
-	redis "github.com/go-redis/redis"
+	redis "github.com/go-redis/redis/v8"
 	"github.com/kellegous/go/internal"
 )
 
 // RouteIterator allows iteration ont he named routes in the store
 type RouteIterator struct {
-	redis.ScanIterator
+	it   *redis.ScanIterator
+	ctx  context.Context
 	name string
 	err  error
-	mu   sync.Mutex
 	cmd  *redis.ScanCmd
 	pos  int
 	rt   *internal.Route
@@ -27,7 +27,7 @@ func (i *RouteIterator) Valid() bool {
 // re-implementing this with identical logic to satisfy the calling Interface
 // https://github.com/go-redis/redis/blob/master/iterator.go
 func (i *RouteIterator) Error() error {
-	return i.Err()
+	return i.it.Err()
 }
 
 // Seek ...
@@ -35,7 +35,7 @@ func (i *RouteIterator) Seek(s string) bool {
 	// Since we have the current position available to us,
 	// we should (hopefully) be able to avoid fully implementing this
 
-	return i.Next()
+	return i.it.Next(i.ctx)
 }
 
 // Name returns the iterator name
@@ -52,4 +52,14 @@ func (i *RouteIterator) Route() *internal.Route {
 // Since the redis Iterator is safe to call concurrently, can we safely skip?
 func (i *RouteIterator) Release() {
 	return
+}
+
+// Next advances the Iterator to the next value
+// will return true if more values can be read
+func (i *RouteIterator) Next() bool {
+	next := i.it.Next(i.ctx)
+	if next {
+		return false
+	}
+	return true
 }

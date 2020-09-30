@@ -10,6 +10,8 @@ import (
 	"github.com/kellegous/go/internal"
 )
 
+var Debug bool
+
 const (
 	nextIDKey = "nextID"
 )
@@ -17,6 +19,12 @@ const (
 // Backend provides access to Redis
 type Backend struct {
 	client *redis.Client
+}
+
+func dbgLogf(format string, v ...interface{}) {
+	if Debug {
+		log.Printf(format, v...)
+	}
 }
 
 // New instantiates a new Backend
@@ -32,7 +40,7 @@ func New(ctx context.Context, addr, pw string, db int) (*Backend, error) {
 		log.Print(err)
 		return nil, err
 	}
-	log.Printf("Redis: %s", pong)
+	dbgLogf("Redis: %s", pong)
 	backend := &Backend{
 		client: client,
 	}
@@ -47,7 +55,7 @@ func (backend *Backend) Close() error {
 
 // Get retreives a shortcut from the data store.
 func (backend *Backend) Get(ctx context.Context, name string) (*internal.Route, error) {
-	log.Printf("[Redis] GET %s\n", name)
+	dbgLogf("[Redis] GET %s\n", name)
 	val, err := backend.client.Get(ctx, name).Result()
 	if err != nil {
 		if err == redis.Nil {
@@ -68,7 +76,7 @@ func (backend *Backend) Get(ctx context.Context, name string) (*internal.Route, 
 
 // Put stores a new route in the data store
 func (backend *Backend) Put(ctx context.Context, key string, rt *internal.Route) error {
-	log.Printf("[Redis] SET %s\n", key)
+	dbgLogf("[Redis] SET %s\n", key)
 	val, err := json.Marshal(rt)
 	if err != nil {
 		log.Print(err)
@@ -83,7 +91,7 @@ func (backend *Backend) Put(ctx context.Context, key string, rt *internal.Route)
 
 // Del deletes a route from the data store
 func (backend *Backend) Del(ctx context.Context, key string) error {
-	log.Printf("[Redis] DEL %s\n", key)
+	dbgLogf("[Redis] DEL %s\n", key)
 	res, err := backend.client.Del(ctx, key).Result()
 	if err != nil {
 		log.Print(err)
@@ -95,7 +103,7 @@ func (backend *Backend) Del(ctx context.Context, key string) error {
 
 // List all routes in an iterator, starting with the key prefix of start
 func (backend *Backend) List(ctx context.Context, start string) (internal.RouteIterator, error) {
-	log.Printf("[Redis] LIST %s\n", start)
+	dbgLogf("[Redis] LIST %s\n", start)
 	cmd := backend.client.Scan(ctx, 0, fmt.Sprintf("%s*", start), 0)
 	iterator := cmd.Iterator()
 	keys, cursor, err := cmd.Result()
@@ -103,9 +111,9 @@ func (backend *Backend) List(ctx context.Context, start string) (internal.RouteI
 		return nil, err
 	}
 	for _, key := range keys {
-		fmt.Println(key)
+		dbgLogf("%s", key)
 	}
-	fmt.Printf("cursor: %d\n", cursor)
+	dbgLogf("cursor: %d\n", cursor)
 
 	return &RouteIterator{
 		it:     iterator,
@@ -117,7 +125,7 @@ func (backend *Backend) List(ctx context.Context, start string) (internal.RouteI
 
 // NextID generates the next numeric ID to be used for an auto-named route
 func (backend *Backend) NextID(ctx context.Context) (uint64, error) {
-	log.Printf("[Redis] NextID\n")
+	dbgLogf("[Redis] NextID\n")
 	result, err := backend.client.Incr(ctx, nextIDKey).Uint64()
 	if err != nil {
 		log.Print(err)
@@ -128,7 +136,7 @@ func (backend *Backend) NextID(ctx context.Context) (uint64, error) {
 
 // GetAll dumps everything in the db for backup purposes
 func (backend *Backend) GetAll(ctx context.Context) (map[string]internal.Route, error) {
-	log.Printf("[Redis] GetAll\n")
+	dbgLogf("[Redis] GetAll\n")
 	golinks := map[string]internal.Route{}
 	cmd := backend.client.Scan(ctx, 0, "*", 0)
 	keys, cursor, err := cmd.Result()
@@ -136,7 +144,10 @@ func (backend *Backend) GetAll(ctx context.Context) (map[string]internal.Route, 
 		return nil, err
 	}
 	for _, key := range keys {
-		fmt.Println(key)
+		if key == nextIDKey {
+			continue
+		}
+		dbgLogf("%s", key)
 		val, err := backend.client.Get(ctx, key).Result()
 		if err != nil {
 			if err == redis.Nil {
@@ -153,7 +164,8 @@ func (backend *Backend) GetAll(ctx context.Context) (map[string]internal.Route, 
 		}
 		golinks[key] = *route
 	}
-	fmt.Printf("cursor: %d\n", cursor)
+	dbgLogf("cursor: %d\n", cursor)
+	dbgLogf("[Redis] Getall - RouteMap: %+v\n", golinks)
 
 	return golinks, nil
 }

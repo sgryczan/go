@@ -160,3 +160,26 @@ func TestGetAll(t *testing.T) {
 
 	assert.Equal(t, case1, string(resj))
 }
+
+func TestList(t *testing.T) {
+	var err error
+	Mock.On("Scan", 0, "*", 0).Return(redis.NewScanCmdResult([]string{key}, 0, nil))
+
+	it, err := MockBackend.List(context.Background(), "")
+	if err != nil {
+		t.Fatalf("Error listing keys: %s", err)
+	}
+
+	next := it.Next()
+	route := it.Route()
+
+	fmt.Printf("Iterator: %+v\n", it)
+	fmt.Printf("Current Route: %+v\n", route)
+	jRoute, err := json.Marshal(route)
+	if err != nil {
+		t.Fatalf("Error: %s", err)
+	}
+	assert.Equal(t, key, it.Name())
+	assert.Equal(t, true, next)
+	assert.Equal(t, case1, string(jRoute))
+}

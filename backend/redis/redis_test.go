@@ -3,6 +3,7 @@ package redis
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"testing"
@@ -34,6 +35,7 @@ func TestMain(m *testing.M) {
 		log.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
 
+	Debug = true
 	Mock = redismock.NewNiceMock(client)
 	Addr = mr.Addr()
 
@@ -112,7 +114,7 @@ func TestNextID(t *testing.T) {
 }
 
 // TestNextID2 makes sure nextID can increment further
-// in the case it already exists (in this case, from above test)
+// if it already exists (in this case, from above test)
 func TestNextID2(t *testing.T) {
 	var err error
 
@@ -123,4 +125,38 @@ func TestNextID2(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, uint64(2), next)
+}
+
+func TestGetAll(t *testing.T) {
+	var err error
+	Mock.On("Get", key).Return(redis.NewStringResult(val, nil))
+
+	// Put an item into the store
+	route := &internal.Route{}
+	err = json.Unmarshal([]byte(case1), &route)
+	if err != nil {
+		t.Fatalf("Failed with err: %s\n", err)
+	}
+	fmt.Printf("Route pre-put: %+v\n", route)
+	err = MockBackend.Put(context.Background(), key, route)
+	if err != nil {
+		t.Fatalf("Failed with err: %s", err)
+	}
+
+	// Dump all records from the store
+	routes, err := MockBackend.GetAll(context.Background())
+	if err != nil {
+		t.Fatalf("Error calling GetAll: %s", err)
+	}
+	fmt.Printf("RouteMap: %+v\n", routes)
+
+	// Pull out the record and ensure it matches
+	res := routes[key]
+	fmt.Printf("RouteValue: %+v\n", res)
+	resj, err := json.Marshal(res)
+	if err != nil {
+		t.Fatalf("Error: %s", err)
+	}
+
+	assert.Equal(t, case1, string(resj))
 }

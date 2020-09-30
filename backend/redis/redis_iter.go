@@ -66,8 +66,8 @@ func (i *RouteIterator) Release() {
 // will return true if more values can be read
 func (i *RouteIterator) Next() bool {
 	next := i.it.Next(i.ctx)
-	log.Printf("[REDIS] - Next()\n")
-	log.Println(i.it.Val())
+	dbgLogf("[REDIS] - Next()\n")
+	dbgLogf("%s", i.it.Val())
 	i.name = i.it.Val()
 
 	ctx := context.Background()

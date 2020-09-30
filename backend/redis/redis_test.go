@@ -3,7 +3,6 @@ package redis
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"os"
 	"testing"
@@ -35,7 +34,7 @@ func TestMain(m *testing.M) {
 		log.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
 
-	Debug = true
+	Debug = false
 	Mock = redismock.NewNiceMock(client)
 	Addr = mr.Addr()
 
@@ -137,7 +136,7 @@ func TestGetAll(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed with err: %s\n", err)
 	}
-	fmt.Printf("Route pre-put: %+v\n", route)
+	dbgLogf("Route pre-put: %+v\n", route)
 	err = MockBackend.Put(context.Background(), key, route)
 	if err != nil {
 		t.Fatalf("Failed with err: %s", err)
@@ -148,11 +147,11 @@ func TestGetAll(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error calling GetAll: %s", err)
 	}
-	fmt.Printf("RouteMap: %+v\n", routes)
+	dbgLogf("RouteMap: %+v\n", routes)
 
 	// Pull out the record and ensure it matches
 	res := routes[key]
-	fmt.Printf("RouteValue: %+v\n", res)
+	dbgLogf("RouteValue: %+v\n", res)
 	resj, err := json.Marshal(res)
 	if err != nil {
 		t.Fatalf("Error: %s", err)
@@ -173,8 +172,8 @@ func TestList(t *testing.T) {
 	next := it.Next()
 	route := it.Route()
 
-	fmt.Printf("Iterator: %+v\n", it)
-	fmt.Printf("Current Route: %+v\n", route)
+	dbgLogf("Iterator: %+v\n", it)
+	dbgLogf("Current Route: %+v\n", route)
 	jRoute, err := json.Marshal(route)
 	if err != nil {
 		t.Fatalf("Error: %s", err)

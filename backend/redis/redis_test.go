@@ -158,6 +158,7 @@ func TestGetAll(t *testing.T) {
 	}
 
 	assert.Equal(t, case1, string(resj))
+	assert.Equal(t, 1, len(routes))
 }
 
 func TestList(t *testing.T) {
